@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "sDCSOGMwT6P7a_wR1N85T"
 uri = "file://artifacts/health-bite/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "wlYfIf8wyUTwciKCiuR5s"
+uri = "file://health-bite.tar.gz"
+type = "unspecified"
+title = "Health Bite — React Native App"
