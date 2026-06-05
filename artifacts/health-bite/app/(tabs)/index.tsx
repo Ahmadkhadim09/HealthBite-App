@@ -7,7 +7,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,8 +18,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useApp } from "@/context/AppContext";
 import colors from "@/constants/colors";
+import { useApp } from "@/context/AppContext";
 
 const C = colors.light;
 
@@ -31,7 +30,7 @@ function validateEmail(email: string) {
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, isLoggedIn, userProfile } = useApp();
+  const { login } = useApp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,29 +45,19 @@ export default function LoginScreen() {
   useEffect(() => {
     void checkAutoLogin();
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
     ]).start();
   }, []);
 
   async function checkAutoLogin() {
     try {
-      const isLoggedInVal = await AsyncStorage.getItem("isLoggedIn");
-      const profileVal = await AsyncStorage.getItem("userProfile");
-      if (isLoggedInVal === "true") {
-        if (profileVal) {
-          router.replace("/(tabs)/results");
-        } else {
-          router.replace("/(tabs)/profile");
-        }
+      const [loginVal, profileVal] = await Promise.all([
+        AsyncStorage.getItem("isLoggedIn"),
+        AsyncStorage.getItem("userProfile"),
+      ]);
+      if (loginVal === "true") {
+        router.replace(profileVal ? "/(tabs)/results" : "/(tabs)/profile");
         return;
       }
     } catch {
@@ -80,18 +69,10 @@ export default function LoginScreen() {
 
   function validate() {
     let ok = true;
-    if (!validateEmail(email)) {
-      setEmailError("Enter a valid email address");
-      ok = false;
-    } else {
-      setEmailError("");
-    }
-    if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
-      ok = false;
-    } else {
-      setPasswordError("");
-    }
+    if (!validateEmail(email)) { setEmailError("Enter a valid email address"); ok = false; }
+    else setEmailError("");
+    if (password.length < 6) { setPasswordError("Password must be at least 6 characters"); ok = false; }
+    else setPasswordError("");
     return ok;
   }
 
@@ -102,11 +83,7 @@ export default function LoginScreen() {
     try {
       await login(email.trim());
       const profileVal = await AsyncStorage.getItem("userProfile");
-      if (profileVal) {
-        router.replace("/(tabs)/results");
-      } else {
-        router.replace("/(tabs)/profile");
-      }
+      router.replace(profileVal ? "/(tabs)/results" : "/(tabs)/profile");
     } finally {
       setLoading(false);
     }
@@ -120,6 +97,8 @@ export default function LoginScreen() {
     );
   }
 
+  const topPad = insets.top + (Platform.OS === "web" ? 67 : 20);
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -127,9 +106,9 @@ export default function LoginScreen() {
     >
       <LinearGradient
         colors={["#1A9B63", "#2DB87A", "#4ED49A"]}
-        style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20) }]}
+        style={[styles.header, { paddingTop: topPad }]}
       >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}>
           <View style={styles.logoCircle}>
             <Feather name="activity" size={36} color="#fff" />
           </View>
@@ -193,16 +172,22 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginBtnText}>Sign In</Text>
-            )}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Sign In</Text>}
           </Pressable>
 
-          <Text style={styles.hint}>
-            New here? Any valid email and a 6+ character password works.
-          </Text>
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.signUpBtn, pressed && styles.signUpBtnPressed]}
+            onPress={() => router.push("/(tabs)/signup")}
+          >
+            <Feather name="user-plus" size={18} color={C.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.signUpBtnText}>Create New Account</Text>
+          </Pressable>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -211,115 +196,46 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: C.background },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.background,
-  },
-  header: {
-    paddingBottom: 40,
-    paddingHorizontal: 32,
-    alignItems: "center",
-  },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.background },
+  header: { paddingBottom: 40, paddingHorizontal: 32, alignItems: "center" },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 72, height: 72, borderRadius: 36,
     backgroundColor: "rgba(255,255,255,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    alignSelf: "center",
+    alignItems: "center", justifyContent: "center", marginBottom: 16,
   },
-  appName: {
-    fontSize: 34,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    textAlign: "center",
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.85)",
-    textAlign: "center",
-    marginTop: 6,
-  },
-  formContainer: {
-    padding: 24,
-    paddingTop: 32,
-  },
-  welcomeText: {
-    fontSize: 26,
-    fontFamily: "Inter_700Bold",
-    color: C.foreground,
-    marginBottom: 4,
-  },
-  subText: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: C.mutedForeground,
-    marginBottom: 28,
-  },
+  appName: { fontSize: 34, fontFamily: "Inter_700Bold", color: "#fff", textAlign: "center", letterSpacing: -0.5 },
+  tagline: { fontSize: 15, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.85)", textAlign: "center", marginTop: 6 },
+  formContainer: { padding: 24, paddingTop: 32 },
+  welcomeText: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.foreground, marginBottom: 4 },
+  subText: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.mutedForeground, marginBottom: 28 },
   inputGroup: { marginBottom: 18 },
-  label: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: C.foreground,
-    marginBottom: 8,
-    letterSpacing: 0.3,
-  },
+  label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.foreground, marginBottom: 8, letterSpacing: 0.3 },
   inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.card,
-    borderRadius: colors.radius,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    height: 52,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: C.card, borderRadius: colors.radius,
+    borderWidth: 1.5, borderColor: C.border,
+    paddingHorizontal: 14, height: 52,
   },
   inputError: { borderColor: C.destructive },
   inputIcon: { marginRight: 10 },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: C.foreground,
-  },
-  errorText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.destructive,
-    marginTop: 5,
-  },
+  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: C.foreground },
+  errorText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.destructive, marginTop: 5 },
   loginBtn: {
-    backgroundColor: C.primary,
-    borderRadius: colors.radius,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: C.primary, borderRadius: colors.radius,
+    height: 54, alignItems: "center", justifyContent: "center",
     marginTop: 8,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
   },
-  loginBtnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-  loginBtnText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    letterSpacing: 0.3,
+  loginBtnPressed: { opacity: 0.85 },
+  loginBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 0.3 },
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 20, gap: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.mutedForeground },
+  signUpBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    borderRadius: colors.radius, borderWidth: 1.5, borderColor: C.primary,
+    height: 54, backgroundColor: C.card,
   },
-  hint: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.mutedForeground,
-    textAlign: "center",
-    marginTop: 20,
-    lineHeight: 18,
-  },
+  signUpBtnPressed: { opacity: 0.8 },
+  signUpBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.primary },
 });
