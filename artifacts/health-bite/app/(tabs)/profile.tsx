@@ -39,22 +39,16 @@ export default function ProfileScreen() {
   const [gender, setGender] = useState<Gender>("male");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   function validate() {
     const errs: Record<string, string> = {};
     const ageN = parseInt(age, 10);
     const weightN = parseFloat(weight);
     const heightN = parseFloat(height);
-
-    if (!age || isNaN(ageN) || ageN < 10 || ageN > 100) {
-      errs.age = "Enter a valid age (10–100)";
-    }
-    if (!weight || isNaN(weightN) || weightN < 20 || weightN > 300) {
-      errs.weight = "Enter a valid weight in kg (20–300)";
-    }
-    if (!height || isNaN(heightN) || heightN < 100 || heightN > 250) {
-      errs.height = "Enter a valid height in cm (100–250)";
-    }
+    if (!age || isNaN(ageN) || ageN < 10 || ageN > 100) errs.age = "Enter a valid age (10–100)";
+    if (!weight || isNaN(weightN) || weightN < 20 || weightN > 300) errs.weight = "Valid weight in kg";
+    if (!height || isNaN(heightN) || heightN < 100 || heightN > 250) errs.height = "Valid height in cm";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -75,77 +69,61 @@ export default function ProfileScreen() {
   const topPad = insets.top + (Platform.OS === "web" ? 67 : 0);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={[styles.headerBar, { paddingTop: topPad + 12 }]}>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <View style={[styles.headerBar, { paddingTop: topPad + 14 }]}>
         <Text style={styles.headerTitle}>Your Profile</Text>
         <Text style={styles.headerSub}>Tell us about yourself</Text>
       </View>
 
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 28) },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 28) }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Basic info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Info</Text>
+          <Text style={styles.sectionLabel}>BASIC INFO</Text>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Age</Text>
-              <View style={[styles.inputWrapper, errors.age ? styles.inputError : null]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="25"
-                  placeholderTextColor={C.mutedForeground}
-                  value={age}
-                  onChangeText={(t) => { setAge(t); setErrors({ ...errors, age: "" }); }}
-                  keyboardType="number-pad"
-                  returnKeyType="next"
-                  maxLength={3}
-                />
-                <Text style={styles.unit}>yrs</Text>
+            {[
+              { key: "age", placeholder: "25", unit: "yrs", value: age, setter: setAge },
+              { key: "weight", placeholder: "70", unit: "kg", value: weight, setter: setWeight },
+            ].map((f) => (
+              <View key={f.key} style={[styles.inputGroup, { flex: 1, marginRight: f.key === "age" ? 8 : 0, marginLeft: f.key === "weight" ? 8 : 0 }]}>
+                <Text style={styles.fieldLabel}>{f.key === "age" ? "AGE" : "WEIGHT"}</Text>
+                <View style={[styles.inputWrapper, focusedField === f.key && styles.inputFocused, !!errors[f.key] && styles.inputErrorBorder]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={f.placeholder}
+                    placeholderTextColor="rgba(255,255,255,0.2)"
+                    value={f.value}
+                    onChangeText={(t) => { f.setter(t); setErrors({ ...errors, [f.key]: "" }); }}
+                    keyboardType="decimal-pad"
+                    maxLength={5}
+                    onFocus={() => setFocusedField(f.key)}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <Text style={styles.unit}>{f.unit}</Text>
+                </View>
+                {!!errors[f.key] && <Text style={styles.errorText}>{errors[f.key]}</Text>}
               </View>
-              {!!errors.age && <Text style={styles.errorText}>{errors.age}</Text>}
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>Weight</Text>
-              <View style={[styles.inputWrapper, errors.weight ? styles.inputError : null]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="70"
-                  placeholderTextColor={C.mutedForeground}
-                  value={weight}
-                  onChangeText={(t) => { setWeight(t); setErrors({ ...errors, weight: "" }); }}
-                  keyboardType="decimal-pad"
-                  returnKeyType="next"
-                  maxLength={5}
-                />
-                <Text style={styles.unit}>kg</Text>
-              </View>
-              {!!errors.weight && <Text style={styles.errorText}>{errors.weight}</Text>}
-            </View>
+            ))}
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Height</Text>
-            <View style={[styles.inputWrapper, errors.height ? styles.inputError : null]}>
+            <Text style={styles.fieldLabel}>HEIGHT</Text>
+            <View style={[styles.inputWrapper, focusedField === "height" && styles.inputFocused, !!errors.height && styles.inputErrorBorder]}>
               <TextInput
                 style={styles.input}
                 placeholder="170"
-                placeholderTextColor={C.mutedForeground}
+                placeholderTextColor="rgba(255,255,255,0.2)"
                 value={height}
                 onChangeText={(t) => { setHeight(t); setErrors({ ...errors, height: "" }); }}
                 keyboardType="decimal-pad"
-                returnKeyType="done"
                 maxLength={5}
+                onFocus={() => setFocusedField("height")}
+                onBlur={() => setFocusedField(null)}
               />
               <Text style={styles.unit}>cm</Text>
             </View>
@@ -153,23 +131,17 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Gender */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gender</Text>
+          <Text style={styles.sectionLabel}>GENDER</Text>
           <View style={styles.toggleRow}>
             {(["male", "female"] as Gender[]).map((g) => (
               <Pressable
                 key={g}
                 style={[styles.toggleBtn, gender === g && styles.toggleBtnActive]}
-                onPress={async () => {
-                  setGender(g);
-                  await Haptics.selectionAsync();
-                }}
+                onPress={async () => { setGender(g); await Haptics.selectionAsync(); }}
               >
-                <Feather
-                  name={g === "male" ? "user" : "user"}
-                  size={18}
-                  color={gender === g ? "#fff" : C.mutedForeground}
-                />
+                <Feather name="user" size={16} color={gender === g ? "#000" : "rgba(255,255,255,0.4)"} />
                 <Text style={[styles.toggleText, gender === g && styles.toggleTextActive]}>
                   {g === "male" ? "Male" : "Female"}
                 </Text>
@@ -178,32 +150,20 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Activity */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity Level</Text>
+          <Text style={styles.sectionLabel}>ACTIVITY LEVEL</Text>
           {ACTIVITY_OPTIONS.map((opt) => (
             <Pressable
               key={opt.key}
-              style={[
-                styles.activityOption,
-                activityLevel === opt.key && styles.activityOptionActive,
-              ]}
-              onPress={async () => {
-                setActivityLevel(opt.key);
-                await Haptics.selectionAsync();
-              }}
+              style={[styles.activityOption, activityLevel === opt.key && styles.activityOptionActive]}
+              onPress={async () => { setActivityLevel(opt.key); await Haptics.selectionAsync(); }}
             >
-              <View style={styles.activityDot}>
-                {activityLevel === opt.key && (
-                  <View style={styles.activityDotInner} />
-                )}
+              <View style={[styles.radio, activityLevel === opt.key && styles.radioActive]}>
+                {activityLevel === opt.key && <View style={styles.radioInner} />}
               </View>
-              <View style={styles.activityTextGroup}>
-                <Text
-                  style={[
-                    styles.activityLabel,
-                    activityLevel === opt.key && styles.activityLabelActive,
-                  ]}
-                >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.activityLabel, activityLevel === opt.key && styles.activityLabelActive]}>
                   {opt.label}
                 </Text>
                 <Text style={styles.activityDesc}>{opt.desc}</Text>
@@ -212,19 +172,13 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* Submit */}
         <Pressable
           style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
           onPress={handleSubmit}
         >
-          <LinearGradient
-            colors={["#1A9B63", "#2DB87A"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.submitGradient}
-          >
-            <Text style={styles.submitText}>Calculate My Calories</Text>
-            <Feather name="arrow-right" size={18} color="#fff" style={{ marginLeft: 8 }} />
-          </LinearGradient>
+          <Text style={styles.submitText}>Calculate My Calories</Text>
+          <Feather name="arrow-right" size={18} color="#000" style={{ marginLeft: 8 }} />
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -238,153 +192,80 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    borderBottomColor: "rgba(255,255,255,0.07)",
   },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: C.foreground,
-  },
-  headerSub: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: C.mutedForeground,
-    marginTop: 3,
-  },
+  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
+  headerSub: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 3 },
   content: { padding: 20 },
   section: {
     backgroundColor: C.card,
     borderRadius: colors.radius,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: "rgba(255,255,255,0.07)",
   },
-  sectionTitle: {
-    fontSize: 13,
+  sectionLabel: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    color: C.mutedForeground,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    letterSpacing: 1.2,
     marginBottom: 14,
   },
   row: { flexDirection: "row" },
   inputGroup: { marginBottom: 14 },
-  label: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: C.foreground,
+  fieldLabel: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.8,
     marginBottom: 7,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.background,
+    backgroundColor: "#1E1E1E",
     borderRadius: colors.radius - 2,
     borderWidth: 1.5,
-    borderColor: C.border,
+    borderColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 14,
     height: 48,
   },
-  inputError: { borderColor: C.destructive },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: C.foreground,
-  },
-  unit: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: C.mutedForeground,
-    marginLeft: 6,
-  },
-  errorText: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: C.destructive,
-    marginTop: 4,
-  },
+  inputFocused: { borderColor: "rgba(255,255,255,0.6)" },
+  inputErrorBorder: { borderColor: C.destructive },
+  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: "#fff" },
+  unit: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.3)", marginLeft: 6 },
+  errorText: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.destructive, marginTop: 4 },
   toggleRow: { flexDirection: "row", gap: 10 },
   toggleBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: colors.radius - 2,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: C.background,
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 13, borderRadius: colors.radius - 2,
+    borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "#1E1E1E",
   },
-  toggleBtnActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
-  },
-  toggleText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: C.mutedForeground,
-  },
-  toggleTextActive: { color: "#fff" },
+  toggleBtnActive: { backgroundColor: "#fff", borderColor: "#fff" },
+  toggleText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
+  toggleTextActive: { color: "#000" },
   activityOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: colors.radius - 2,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: C.background,
-    marginBottom: 8,
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 12, paddingHorizontal: 12,
+    borderRadius: colors.radius - 2, borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.08)", backgroundColor: "#1E1E1E", marginBottom: 8,
   },
-  activityOptionActive: {
-    borderColor: C.primary,
-    backgroundColor: "#EBF8F2",
+  activityOptionActive: { borderColor: "rgba(255,255,255,0.5)", backgroundColor: "#242424" },
+  radio: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 2, borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center", justifyContent: "center", marginRight: 12,
   },
-  activityDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: C.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+  radioActive: { borderColor: "#fff" },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
+  activityLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.5)" },
+  activityLabelActive: { color: "#fff" },
+  activityDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", marginTop: 1 },
+  submitBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#fff", borderRadius: colors.radius, height: 54, marginTop: 8,
   },
-  activityDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: C.primary,
-  },
-  activityTextGroup: { flex: 1 },
-  activityLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: C.foreground,
-  },
-  activityLabelActive: { color: C.primary },
-  activityDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.mutedForeground,
-    marginTop: 1,
-  },
-  submitBtn: { marginTop: 8, borderRadius: colors.radius, overflow: "hidden" },
-  submitBtnPressed: { opacity: 0.88 },
-  submitGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  submitText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    letterSpacing: 0.2,
-  },
+  submitBtnPressed: { opacity: 0.85 },
+  submitText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#000" },
 });

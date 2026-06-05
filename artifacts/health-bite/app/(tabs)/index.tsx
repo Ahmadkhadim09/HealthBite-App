@@ -1,53 +1,92 @@
-import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  ActivityIndicator,
   Animated,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import colors from "@/constants/colors";
-import { useApp } from "@/context/AppContext";
 
 const C = colors.light;
+const ICONS = ["🥗", "🍱", "🥩", "🥦", "🍣", "🥑", "🍗", "🫐", "🥕", "🍎"];
 
-function validateEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+function FloatingIcon({
+  icon,
+  anim,
+  left,
+  bottom,
+  size,
+  delay,
+}: {
+  icon: string;
+  anim: Animated.Value;
+  left: string;
+  bottom: number;
+  size: number;
+  delay: number;
+}) {
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.2, 0.8, 1],
+    outputRange: [0, 0.22, 0.22, 0],
+  });
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -280],
+  });
+  return (
+    <Animated.Text
+      style={{
+        position: "absolute",
+        bottom,
+        left: left as any,
+        fontSize: size,
+        opacity,
+        transform: [{ translateY }],
+      }}
+    >
+      {icon}
+    </Animated.Text>
+  );
 }
 
-export default function LoginScreen() {
+export default function LandingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login } = useApp();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
-
+  const floatAnims = useRef(ICONS.map(() => new Animated.Value(0))).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     void checkAutoLogin();
+
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(logoScale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
     ]).start();
+
+    floatAnims.forEach((anim, i) => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 700),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 4000 + i * 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      );
+      loop.start();
+    });
   }, []);
 
   async function checkAutoLogin() {
@@ -58,184 +97,217 @@ export default function LoginScreen() {
       ]);
       if (loginVal === "true") {
         router.replace(profileVal ? "/(tabs)/results" : "/(tabs)/profile");
-        return;
       }
     } catch {
-      // ignore
-    } finally {
-      setChecking(false);
+      // ignore, stay on landing
     }
   }
 
-  function validate() {
-    let ok = true;
-    if (!validateEmail(email)) { setEmailError("Enter a valid email address"); ok = false; }
-    else setEmailError("");
-    if (password.length < 6) { setPasswordError("Password must be at least 6 characters"); ok = false; }
-    else setPasswordError("");
-    return ok;
-  }
-
-  async function handleLogin() {
-    if (!validate()) return;
-    setLoading(true);
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await login(email.trim());
-      const profileVal = await AsyncStorage.getItem("userProfile");
-      router.replace(profileVal ? "/(tabs)/results" : "/(tabs)/profile");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (checking) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={C.primary} />
-      </View>
-    );
-  }
-
-  const topPad = insets.top + (Platform.OS === "web" ? 67 : 20);
+  const topPad = insets.top + (Platform.OS === "web" ? 67 : 0);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={styles.container}>
+      {/* Background gradient */}
       <LinearGradient
-        colors={["#1A9B63", "#2DB87A", "#4ED49A"]}
-        style={[styles.header, { paddingTop: topPad }]}
-      >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}>
-          <View style={styles.logoCircle}>
-            <Feather name="activity" size={36} color="#fff" />
-          </View>
-          <Text style={styles.appName}>Health Bite</Text>
-          <Text style={styles.tagline}>Your personal nutrition guide</Text>
-        </Animated.View>
-      </LinearGradient>
+        colors={["#0d1f16", "#080808", "#050505"]}
+        locations={[0, 0.5, 1]}
+        style={StyleSheet.absoluteFill}
+      />
 
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={[
-          styles.formContainer,
-          { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 24) },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <Text style={styles.welcomeText}>Welcome back</Text>
-          <Text style={styles.subText}>Sign in to continue your journey</Text>
+      {/* Glow circles */}
+      <View style={[styles.glowCircle, { top: -60, left: -80, width: 280, height: 280 }]} />
+      <View style={[styles.glowCircle, { bottom: 80, right: -80, width: 220, height: 220, opacity: 0.07 }]} />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <View style={[styles.inputWrapper, emailError ? styles.inputError : null]}>
-              <Feather name="mail" size={18} color={C.mutedForeground} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="you@example.com"
-                placeholderTextColor={C.mutedForeground}
-                value={email}
-                onChangeText={(t) => { setEmail(t); setEmailError(""); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
-            </View>
-            {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
-          </View>
+      {/* Floating food icons */}
+      {ICONS.map((icon, i) => (
+        <FloatingIcon
+          key={i}
+          icon={icon}
+          anim={floatAnims[i]!}
+          left={`${(i * 31 + 5) % 85}%`}
+          bottom={-20}
+          size={i % 3 === 0 ? 30 : 22}
+          delay={i * 700}
+        />
+      ))}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
-              <Feather name="lock" size={18} color={C.mutedForeground} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor={C.mutedForeground}
-                value={password}
-                onChangeText={(t) => { setPassword(t); setPasswordError(""); }}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-              />
-            </View>
-            {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
-          </View>
+      {/* Grid pattern overlay */}
+      <View style={styles.gridOverlay} />
 
+      {/* Top bar — Login + Sign Up */}
+      <Animated.View style={[styles.topBar, { paddingTop: topPad + 14, opacity: fadeAnim }]}>
+        <Text style={styles.topBrand}>Health Bite</Text>
+        <View style={styles.topBtns}>
           <Pressable
-            style={({ pressed }) => [styles.loginBtn, pressed && styles.loginBtnPressed]}
-            onPress={handleLogin}
-            disabled={loading}
+            style={styles.topLoginBtn}
+            onPress={async () => {
+              await Haptics.selectionAsync();
+              router.push("/(tabs)/login");
+            }}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Sign In</Text>}
+            <Text style={styles.topLoginText}>Login</Text>
           </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
           <Pressable
-            style={({ pressed }) => [styles.signUpBtn, pressed && styles.signUpBtnPressed]}
-            onPress={() => router.push("/(tabs)/signup")}
+            style={styles.topSignUpBtn}
+            onPress={async () => {
+              await Haptics.selectionAsync();
+              router.push("/(tabs)/signup");
+            }}
           >
-            <Feather name="user-plus" size={18} color={C.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.signUpBtnText}>Create New Account</Text>
+            <Text style={styles.topSignUpText}>Sign Up</Text>
           </Pressable>
+        </View>
+      </Animated.View>
+
+      {/* Hero */}
+      <Animated.View style={[styles.hero, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.logoBox, { transform: [{ scale: logoScale }] }]}>
+          <LinearGradient colors={["#1A9B63", "#2DB87A"]} style={styles.logoGradient}>
+            <Text style={styles.logoEmoji}>🌿</Text>
+          </LinearGradient>
         </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        <Text style={styles.heroTitle}>Eat Smart.{"\n"}Feel Great.</Text>
+        <Text style={styles.heroSub}>
+          Personalized calorie goals matched to{"\n"}real restaurants near you
+        </Text>
+
+        {/* Feature pills */}
+        <View style={styles.pillsRow}>
+          {["📍 Location-based", "🔥 Calorie-smart", "⭐ Rated meals"].map((f) => (
+            <View key={f} style={styles.pill}>
+              <Text style={styles.pillText}>{f}</Text>
+            </View>
+          ))}
+        </View>
+      </Animated.View>
+
+      {/* Bottom CTA */}
+      <Animated.View style={[styles.bottomArea, { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 28), opacity: fadeAnim }]}>
+        <Pressable
+          style={({ pressed }) => [styles.ctaBtn, pressed && styles.ctaBtnPressed]}
+          onPress={async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/(tabs)/signup");
+          }}
+        >
+          <Text style={styles.ctaBtnText}>Get Started →</Text>
+        </Pressable>
+        <Text style={styles.ctaHint}>Free · No credit card required</Text>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: C.background },
-  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.background },
-  header: { paddingBottom: 40, paddingHorizontal: 32, alignItems: "center" },
-  logoCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    alignItems: "center", justifyContent: "center", marginBottom: 16,
+  container: { flex: 1, backgroundColor: "#080808" },
+  glowCircle: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "#2DB87A",
+    opacity: 0.12,
   },
-  appName: { fontSize: 34, fontFamily: "Inter_700Bold", color: "#fff", textAlign: "center", letterSpacing: -0.5 },
-  tagline: { fontSize: 15, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.85)", textAlign: "center", marginTop: 6 },
-  formContainer: { padding: 24, paddingTop: 32 },
-  welcomeText: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.foreground, marginBottom: 4 },
-  subText: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.mutedForeground, marginBottom: 28 },
-  inputGroup: { marginBottom: 18 },
-  label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.foreground, marginBottom: 8, letterSpacing: 0.3 },
-  inputWrapper: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: C.card, borderRadius: colors.radius,
-    borderWidth: 1.5, borderColor: C.border,
-    paddingHorizontal: 14, height: 52,
+  gridOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.04,
+    backgroundColor: "transparent",
   },
-  inputError: { borderColor: C.destructive },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: C.foreground },
-  errorText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.destructive, marginTop: 5 },
-  loginBtn: {
-    backgroundColor: C.primary, borderRadius: colors.radius,
-    height: 54, alignItems: "center", justifyContent: "center",
-    marginTop: 8,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 22,
+    paddingBottom: 12,
   },
-  loginBtnPressed: { opacity: 0.85 },
-  loginBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 0.3 },
-  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 20, gap: 12 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
-  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.mutedForeground },
-  signUpBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    borderRadius: colors.radius, borderWidth: 1.5, borderColor: C.primary,
-    height: 54, backgroundColor: C.card,
+  topBrand: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.2,
   },
-  signUpBtnPressed: { opacity: 0.8 },
-  signUpBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.primary },
+  topBtns: { flexDirection: "row", gap: 8 },
+  topLoginBtn: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  topLoginText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  topSignUpBtn: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  topSignUpText: { color: "#000", fontSize: 13, fontFamily: "Inter_700Bold" },
+  hero: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  logoBox: {
+    width: 84,
+    height: 84,
+    borderRadius: 26,
+    marginBottom: 28,
+    shadowColor: "#2DB87A",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  logoGradient: {
+    width: 84,
+    height: 84,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoEmoji: { fontSize: 38 },
+  heroTitle: {
+    color: "#fff",
+    fontSize: 40,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+    letterSpacing: -1,
+    lineHeight: 46,
+    marginBottom: 14,
+  },
+  heroSub: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  pillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" },
+  pill: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  pillText: { color: "rgba(255,255,255,0.65)", fontSize: 12, fontFamily: "Inter_500Medium" },
+  bottomArea: { paddingHorizontal: 24 },
+  ctaBtn: {
+    backgroundColor: "#fff",
+    borderRadius: colors.radius,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  ctaBtnPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  ctaBtnText: { color: "#000", fontSize: 16, fontFamily: "Inter_700Bold", letterSpacing: 0.2 },
+  ctaHint: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
 });

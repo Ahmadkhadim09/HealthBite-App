@@ -32,37 +32,21 @@ const C = colors.light;
 
 type LocationStatus = "idle" | "requesting" | "granted" | "denied";
 
-interface TheMeal {
-  idMeal: string;
-  strMeal: string;
-  strMealThumb: string;
-}
-
+interface TheMeal { idMeal: string; strMeal: string; strMealThumb: string; }
 interface OverpassElement {
-  id: number;
-  lat: number;
-  lon: number;
+  id: number; lat: number; lon: number;
   tags?: { name?: string; cuisine?: string; [key: string]: string | undefined };
 }
-
 export interface MealCard {
-  id: string;
-  restaurant: string;
-  mealName: string;
-  thumbnail: string;
-  calories: number;
-  rating: number;
-  isNearby?: boolean;
+  id: string; restaurant: string; mealName: string; thumbnail: string;
+  calories: number; rating: number; isNearby?: boolean;
 }
 
 async function fetchTheMealDB(category: string): Promise<MealCard[]> {
-  const res = await fetch(
-    `https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`,
-  );
+  const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`);
   if (!res.ok) throw new Error("Failed to fetch meals");
   const json = (await res.json()) as { meals: TheMeal[] | null };
-  const meals = json.meals ?? [];
-  return meals.slice(0, 12).map((m, i) => ({
+  return (json.meals ?? []).slice(0, 12).map((m, i) => ({
     id: m.idMeal,
     restaurant: RESTAURANT_NAMES[i % RESTAURANT_NAMES.length] ?? "Local Bistro",
     mealName: m.strMeal,
@@ -73,31 +57,22 @@ async function fetchTheMealDB(category: string): Promise<MealCard[]> {
   }));
 }
 
-async function fetchNearbyRestaurants(
-  lat: number,
-  lon: number,
-  tdee: number,
-): Promise<MealCard[]> {
+async function fetchNearbyRestaurants(lat: number, lon: number, tdee: number): Promise<MealCard[]> {
   const query = `[out:json][timeout:25];node["amenity"="restaurant"](around:3000,${lat},${lon});out body 15;`;
-  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-  const res = await fetch(url);
+  const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
   if (!res.ok) throw new Error("Overpass error");
   const json = (await res.json()) as { elements: OverpassElement[] };
   const elements = json.elements ?? [];
   if (elements.length === 0) return [];
-
   const mealTarget = Math.round(tdee / 3);
-
   return elements.slice(0, 12).map((el, i) => {
     const cuisine = el.tags?.cuisine ?? "default";
-    const mealName = getMealNameForCuisine(cuisine, el.id);
-    const calVariance = (el.id % 201) - 100;
     return {
       id: String(el.id),
       restaurant: el.tags?.name ?? `Restaurant ${i + 1}`,
-      mealName,
+      mealName: getMealNameForCuisine(cuisine, el.id),
       thumbnail: FOOD_THUMBNAILS[i % FOOD_THUMBNAILS.length] ?? FOOD_THUMBNAILS[0]!,
-      calories: Math.max(200, mealTarget + calVariance),
+      calories: Math.max(200, mealTarget + ((el.id % 201) - 100)),
       rating: parseFloat((3.5 + (el.id % 15) / 10).toFixed(1)),
       isNearby: true,
     };
@@ -109,12 +84,7 @@ function StarRating({ rating }: { rating: number }) {
   return (
     <View style={{ flexDirection: "row", gap: 2 }}>
       {[0, 1, 2, 3, 4].map((i) => (
-        <Feather
-          key={i}
-          name="star"
-          size={12}
-          color={i < full ? "#F59E0B" : C.border}
-        />
+        <Feather key={i} name="star" size={11} color={i < full ? "#F59E0B" : "rgba(255,255,255,0.15)"} />
       ))}
     </View>
   );
@@ -123,30 +93,21 @@ function StarRating({ rating }: { rating: number }) {
 function RestaurantCard({ item }: { item: MealCard }) {
   return (
     <View style={styles.card}>
-      <Image
-        source={{ uri: item.thumbnail }}
-        style={styles.thumbnail}
-        contentFit="cover"
-        transition={300}
-      />
+      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} contentFit="cover" transition={300} />
       <View style={styles.cardContent}>
         <View style={styles.cardTopRow}>
-          <Text style={styles.restaurantName} numberOfLines={1}>
-            {item.restaurant}
-          </Text>
+          <Text style={styles.restaurantName} numberOfLines={1}>{item.restaurant}</Text>
           {item.isNearby && (
             <View style={styles.nearbyBadge}>
-              <Feather name="map-pin" size={10} color={C.primary} />
+              <Feather name="map-pin" size={9} color={C.accent} />
               <Text style={styles.nearbyText}>Nearby</Text>
             </View>
           )}
         </View>
-        <Text style={styles.mealName} numberOfLines={2}>
-          {item.mealName}
-        </Text>
+        <Text style={styles.mealName} numberOfLines={2}>{item.mealName}</Text>
         <View style={styles.cardFooter}>
           <View style={styles.caloriePill}>
-            <Feather name="zap" size={11} color={C.primary} />
+            <Feather name="zap" size={10} color={C.accent} />
             <Text style={styles.calorieText}>{item.calories} kcal</Text>
           </View>
           <View style={styles.ratingRow}>
@@ -163,20 +124,13 @@ export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { userProfile, logout } = useApp();
-
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [cityName, setCityName] = useState<string>("");
+  const [cityName, setCityName] = useState("");
 
   const tdee = useMemo(() => {
     if (!userProfile) return 2000;
-    return calculateTDEE(
-      userProfile.age,
-      userProfile.weight,
-      userProfile.height,
-      userProfile.gender,
-      userProfile.activityLevel,
-    );
+    return calculateTDEE(userProfile.age, userProfile.weight, userProfile.height, userProfile.gender, userProfile.activityLevel);
   }, [userProfile]);
 
   const category = useMemo(() => getMealCategory(tdee), [tdee]);
@@ -191,7 +145,6 @@ export default function ResultsScreen() {
       if (coords) {
         const nearby = await fetchNearbyRestaurants(coords.lat, coords.lon, tdee);
         if (nearby.length > 0) return nearby;
-        return fetchTheMealDB(category);
       }
       return fetchTheMealDB(category);
     },
@@ -201,28 +154,15 @@ export default function ResultsScreen() {
   async function requestLocation() {
     setLocationStatus("requesting");
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      setLocationStatus("denied");
-      return;
-    }
-
+    if (status !== "granted") { setLocationStatus("denied"); return; }
     setLocationStatus("granted");
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
     const { latitude, longitude } = loc.coords;
-
     try {
       const [geo] = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (geo) {
-        setCityName(geo.city ?? geo.region ?? geo.country ?? "your area");
-      }
-    } catch {
-      setCityName("your area");
-    }
-
+      if (geo) setCityName(geo.city ?? geo.region ?? geo.country ?? "your area");
+    } catch { setCityName("your area"); }
     setCoords({ lat: latitude, lon: longitude });
   }
 
@@ -243,55 +183,41 @@ export default function ResultsScreen() {
     ]}>
       {locationStatus === "idle" && (
         <>
-          <View style={styles.locationBannerLeft}>
-            <Feather name="map-pin" size={18} color={C.primary} />
+          <View style={styles.locationLeft}>
+            <Feather name="map-pin" size={16} color={C.accent} />
             <View>
-              <Text style={styles.locationBannerTitle}>Use Your Location</Text>
-              <Text style={styles.locationBannerSub}>
-                Find real restaurants near you (Lahore, London & more)
-              </Text>
+              <Text style={styles.locationTitle}>Use Your Location</Text>
+              <Text style={styles.locationSub}>Find real restaurants near you</Text>
             </View>
           </View>
-          <Pressable
-            style={styles.locationBtn}
-            onPress={requestLocation}
-          >
+          <Pressable style={styles.locationBtn} onPress={requestLocation}>
             <Text style={styles.locationBtnText}>Enable</Text>
           </Pressable>
         </>
       )}
-
       {locationStatus === "requesting" && (
-        <View style={styles.locationBannerLeft}>
-          <ActivityIndicator size="small" color={C.primary} />
-          <Text style={styles.locationBannerTitle}>Getting your location…</Text>
+        <View style={styles.locationLeft}>
+          <ActivityIndicator size="small" color={C.accent} />
+          <Text style={styles.locationTitle}>Getting your location…</Text>
         </View>
       )}
-
       {locationStatus === "granted" && (
-        <View style={styles.locationBannerLeft}>
-          <Feather name="check-circle" size={18} color="#fff" />
+        <View style={styles.locationLeft}>
+          <Feather name="check-circle" size={16} color="#fff" />
           <View>
-            <Text style={[styles.locationBannerTitle, { color: "#fff" }]}>
-              {cityName ? `Showing restaurants near ${cityName}` : "Location found!"}
+            <Text style={[styles.locationTitle, { color: "#fff" }]}>
+              {cityName ? `Near ${cityName}` : "Location found!"}
             </Text>
-            <Text style={[styles.locationBannerSub, { color: "rgba(255,255,255,0.8)" }]}>
-              Real restaurants near your location
-            </Text>
+            <Text style={[styles.locationSub, { color: "rgba(255,255,255,0.65)" }]}>Real restaurants nearby</Text>
           </View>
         </View>
       )}
-
       {locationStatus === "denied" && (
-        <View style={styles.locationBannerLeft}>
-          <Feather name="alert-circle" size={18} color={C.destructive} />
+        <View style={styles.locationLeft}>
+          <Feather name="alert-circle" size={16} color={C.destructive} />
           <View>
-            <Text style={[styles.locationBannerTitle, { color: C.destructive }]}>
-              Location Access Denied
-            </Text>
-            <Text style={styles.locationBannerSub}>
-              Showing general recommendations instead
-            </Text>
+            <Text style={[styles.locationTitle, { color: C.destructive }]}>Location Denied</Text>
+            <Text style={styles.locationSub}>Showing general recommendations</Text>
           </View>
         </View>
       )}
@@ -300,28 +226,38 @@ export default function ResultsScreen() {
 
   const ListHeader = (
     <View>
+      {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: topPad + 14 }]}>
-        <Pressable onPress={() => router.push("/(tabs)/profile")} style={styles.iconBtn}>
-          <Feather name="sliders" size={20} color={C.foreground} />
+        <Pressable style={styles.iconBtn} onPress={() => router.push("/(tabs)/profile")}>
+          <Feather name="sliders" size={18} color="rgba(255,255,255,0.7)" />
         </Pressable>
-        <Text style={styles.topBarTitle}>Health Bite</Text>
-        <Pressable onPress={handleLogout} style={styles.iconBtn}>
-          <Feather name="log-out" size={20} color={C.foreground} />
+        <View style={styles.topBarCenter}>
+          <Text style={styles.topBarEmoji}>🌿</Text>
+          <Text style={styles.topBarTitle}>Health Bite</Text>
+        </View>
+        <Pressable style={styles.iconBtn} onPress={handleLogout}>
+          <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
         </Pressable>
       </View>
 
+      {/* TDEE card */}
       <View style={styles.tdeeCard}>
-        <Text style={styles.tdeeLabel}>Daily Calorie Goal</Text>
+        <View style={styles.tdeeTopRow}>
+          <Text style={styles.tdeeLabel}>Daily Calorie Goal</Text>
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryChipText}>{category}</Text>
+          </View>
+        </View>
         <Text style={styles.tdeeNumber}>{tdee.toLocaleString()}</Text>
         <Text style={styles.tdeeUnit}>kcal / day</Text>
         <View style={styles.tdeeMetaRow}>
           <View style={styles.tdeeMeta}>
-            <Feather name="tag" size={12} color="rgba(255,255,255,0.75)" />
-            <Text style={styles.tdeeMetaText}>{category}</Text>
+            <Feather name="coffee" size={12} color="rgba(255,255,255,0.6)" />
+            <Text style={styles.tdeeMetaText}>{Math.round(tdee / 3)} kcal per meal</Text>
           </View>
           <View style={styles.tdeeMeta}>
-            <Feather name="coffee" size={12} color="rgba(255,255,255,0.75)" />
-            <Text style={styles.tdeeMetaText}>{Math.round(tdee / 3)} kcal / meal</Text>
+            <Feather name="activity" size={12} color="rgba(255,255,255,0.6)" />
+            <Text style={styles.tdeeMetaText}>{userProfile?.activityLevel ?? "moderate"}</Text>
           </View>
         </View>
       </View>
@@ -329,9 +265,7 @@ export default function ResultsScreen() {
       {locationBanner}
 
       <Text style={styles.sectionHeading}>
-        {locationStatus === "granted" && cityName
-          ? `Restaurants near ${cityName}`
-          : "Recommended Restaurants"}
+        {locationStatus === "granted" && cityName ? `Restaurants near ${cityName}` : "Recommended Restaurants"}
       </Text>
     </View>
   );
@@ -342,11 +276,9 @@ export default function ResultsScreen() {
         <View style={styles.flex}>
           {ListHeader}
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={C.primary} style={{ marginTop: 32 }} />
+            <ActivityIndicator size="large" color={C.accent} style={{ marginTop: 32 }} />
             <Text style={styles.loadingText}>
-              {locationStatus === "granted"
-                ? "Finding nearby restaurants…"
-                : "Loading recommendations…"}
+              {locationStatus === "granted" ? "Finding nearby restaurants…" : "Loading recommendations…"}
             </Text>
           </View>
         </View>
@@ -354,7 +286,7 @@ export default function ResultsScreen() {
         <View style={styles.flex}>
           {ListHeader}
           <View style={styles.center}>
-            <Feather name="wifi-off" size={40} color={C.mutedForeground} style={{ marginTop: 32 }} />
+            <Feather name="wifi-off" size={40} color="rgba(255,255,255,0.2)" style={{ marginTop: 32 }} />
             <Text style={styles.errorText}>Could not load restaurants</Text>
             <Pressable style={styles.retryBtn} onPress={() => void refetch()}>
               <Text style={styles.retryText}>Try Again</Text>
@@ -380,90 +312,91 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: "center", paddingHorizontal: 24 },
+
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    backgroundColor: C.background,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingBottom: 16, backgroundColor: C.background,
   },
-  topBarTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.foreground },
+  topBarCenter: { flexDirection: "row", alignItems: "center", gap: 6 },
+  topBarEmoji: { fontSize: 16 },
+  topBarTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#fff" },
   iconBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: C.card, alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: C.border,
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "#1C1C1C", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
   },
+
   tdeeCard: {
-    marginHorizontal: 20, marginBottom: 16,
-    backgroundColor: C.primary, borderRadius: colors.radius + 4,
-    padding: 24, alignItems: "center",
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
+    marginHorizontal: 20, marginBottom: 14,
+    backgroundColor: C.accent,
+    borderRadius: colors.radius + 4, padding: 22,
+    shadowColor: C.accent, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
   },
-  tdeeLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.8)", letterSpacing: 0.5, marginBottom: 6 },
-  tdeeNumber: { fontSize: 56, fontFamily: "Inter_700Bold", color: "#fff", lineHeight: 64, letterSpacing: -1 },
-  tdeeUnit: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.75)", marginBottom: 14 },
-  tdeeMetaRow: { flexDirection: "row", gap: 16 },
+  tdeeTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
+  tdeeLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium" },
+  categoryChip: {
+    backgroundColor: "rgba(0,0,0,0.2)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
+  },
+  categoryChipText: { color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  tdeeNumber: { fontSize: 52, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -1, lineHeight: 60 },
+  tdeeUnit: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 14 },
+  tdeeMetaRow: { flexDirection: "row", gap: 10 },
   tdeeMeta: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.15)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
-  tdeeMetaText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  tdeeMetaText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontFamily: "Inter_600SemiBold" },
 
   locationBanner: {
     marginHorizontal: 20, marginBottom: 10,
-    backgroundColor: C.card, borderRadius: colors.radius,
+    backgroundColor: "#161616", borderRadius: colors.radius,
     padding: 14, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between",
-    borderWidth: 1.5, borderColor: C.border,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
   },
-  locationBannerDenied: { borderColor: "#FCA5A5", backgroundColor: "#FFF5F5" },
-  locationBannerGranted: { borderColor: C.primary, backgroundColor: C.primary },
-  locationBannerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  locationBannerTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.foreground },
-  locationBannerSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.mutedForeground, marginTop: 1 },
+  locationBannerDenied: { borderColor: "rgba(239,68,68,0.3)", backgroundColor: "#1a1010" },
+  locationBannerGranted: { borderColor: C.accent, backgroundColor: C.accent },
+  locationLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  locationTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  locationSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 1 },
   locationBtn: {
-    backgroundColor: C.primary, paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 20, marginLeft: 8,
+    backgroundColor: C.accent, paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20,
   },
-  locationBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
+  locationBtnText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#fff" },
 
   sectionHeading: {
-    fontSize: 20, fontFamily: "Inter_700Bold", color: C.foreground,
-    marginTop: 10, marginBottom: 12, paddingHorizontal: 20,
+    fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff",
+    marginTop: 8, marginBottom: 12, paddingHorizontal: 20,
   },
   listContent: { paddingHorizontal: 20 },
+
   card: {
-    backgroundColor: C.card, borderRadius: colors.radius, marginBottom: 14,
+    backgroundColor: "#141414", borderRadius: colors.radius, marginBottom: 12,
     flexDirection: "row", overflow: "hidden",
-    borderWidth: 1, borderColor: C.border,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
   },
-  thumbnail: { width: 96, height: 104 },
+  thumbnail: { width: 90, height: 96 },
   cardContent: { flex: 1, padding: 12, justifyContent: "space-between" },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 },
-  restaurantName: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.primary, flex: 1 },
+  restaurantName: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.accent, flex: 1 },
   nearbyBadge: {
     flexDirection: "row", alignItems: "center", gap: 3,
-    backgroundColor: C.secondary, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+    backgroundColor: "rgba(45,184,122,0.12)", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
   },
-  nearbyText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: C.primary },
-  mealName: {
-    fontSize: 14, fontFamily: "Inter_700Bold", color: C.foreground, lineHeight: 20, flex: 1,
-  },
-  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  nearbyText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: C.accent },
+  mealName: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff", lineHeight: 19, flex: 1 },
+  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 7 },
   caloriePill: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: C.secondary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: "rgba(45,184,122,0.12)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20,
   },
-  calorieText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.primary },
+  calorieText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.accent },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  ratingNum: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.mutedForeground },
+  ratingNum: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
 
-  loadingText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.mutedForeground, marginTop: 12 },
-  errorText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.foreground, marginTop: 14, marginBottom: 10 },
-  retryBtn: { backgroundColor: C.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: colors.radius },
-  retryText: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" },
+  loadingText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", marginTop: 12 },
+  errorText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff", marginTop: 14, marginBottom: 10 },
+  retryBtn: { backgroundColor: "#fff", paddingHorizontal: 24, paddingVertical: 12, borderRadius: colors.radius },
+  retryText: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#000" },
 });
