@@ -30,27 +30,6 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function ActionBtn({
-  icon,
-  label,
-  onPress,
-  accent,
-}: {
-  icon: keyof typeof Feather.glyphMap;
-  label: string;
-  onPress: () => void;
-  accent?: boolean;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.actionBtn, accent && styles.actionBtnAccent, pressed && styles.actionBtnPressed]}
-      onPress={onPress}
-    >
-      <Feather name={icon} size={18} color={accent ? "#000" : C.accent} />
-      <Text style={[styles.actionLabel, accent && styles.actionLabelAccent]}>{label}</Text>
-    </Pressable>
-  );
-}
 
 export default function RestaurantDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -84,17 +63,6 @@ export default function RestaurantDetailScreen() {
   const hasPhone = !!params.phone;
   const hasWebsite = !!params.website;
   const hasCoords = !!params.lat && !!params.lon;
-
-  const mapsUrl = hasCoords
-    ? `https://www.google.com/maps/search/?api=1&query=${params.lat},${params.lon}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        [params.restaurant, params.address, params.city].filter(Boolean).join(", ")
-      )}`;
-
-  async function openMaps() {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await Linking.openURL(mapsUrl);
-  }
 
   async function openWebsite() {
     if (!hasWebsite) return;
@@ -231,12 +199,42 @@ export default function RestaurantDetailScreen() {
           </View>
         ) : null}
 
-        {/* Action buttons */}
-        <View style={styles.actionsGrid}>
-          <ActionBtn icon="map" label="Get Directions" onPress={openMaps} accent />
-          {hasWebsite && <ActionBtn icon="globe" label="Website" onPress={openWebsite} />}
-          {hasPhone && <ActionBtn icon="phone" label="Call" onPress={callPhone} />}
-        </View>
+        {/* Website CTA */}
+        {hasWebsite ? (
+          <Pressable
+            style={({ pressed }) => [styles.websiteBtn, pressed && styles.websiteBtnPressed]}
+            onPress={openWebsite}
+          >
+            <View style={styles.websiteBtnInner}>
+              <View style={styles.websiteBtnIcon}>
+                <Feather name="globe" size={20} color="#000" />
+              </View>
+              <View style={styles.websiteBtnText}>
+                <Text style={styles.websiteBtnLabel}>Visit Website</Text>
+                <Text style={styles.websiteBtnUrl} numberOfLines={1}>
+                  {params.website!.replace(/^https?:\/\//, "")}
+                </Text>
+              </View>
+            </View>
+            <Feather name="arrow-up-right" size={18} color="rgba(0,0,0,0.5)" />
+          </Pressable>
+        ) : (
+          <View style={styles.noWebsiteBox}>
+            <Feather name="globe" size={16} color="rgba(255,255,255,0.15)" />
+            <Text style={styles.noWebsiteText}>No website listed for this restaurant</Text>
+          </View>
+        )}
+
+        {/* Call button (secondary) */}
+        {hasPhone && (
+          <Pressable
+            style={({ pressed }) => [styles.callBtn, pressed && styles.callBtnPressed]}
+            onPress={callPhone}
+          >
+            <Feather name="phone" size={16} color={C.accent} />
+            <Text style={styles.callBtnText}>{params.phone}</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -310,15 +308,37 @@ const styles = StyleSheet.create({
   infoIcon: { marginRight: 12, width: 20 },
   infoText: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.65)" },
 
-  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  actionBtn: {
-    flex: 1, minWidth: 120, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, backgroundColor: "rgba(45,184,122,0.1)",
-    borderWidth: 1.5, borderColor: "rgba(45,184,122,0.3)",
+  websiteBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: "#fff", borderRadius: colors.radius + 2,
+    padding: 16, marginBottom: 12,
+    shadowColor: "#fff", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 6,
+  },
+  websiteBtnPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
+  websiteBtnInner: { flexDirection: "row", alignItems: "center", gap: 14, flex: 1 },
+  websiteBtnIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.08)", alignItems: "center", justifyContent: "center",
+  },
+  websiteBtnText: { flex: 1 },
+  websiteBtnLabel: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#000" },
+  websiteBtnUrl: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(0,0,0,0.4)", marginTop: 2 },
+
+  noWebsiteBox: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: "#161616", borderRadius: colors.radius,
+    padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
+  },
+  noWebsiteText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.25)" },
+
+  callBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: "rgba(45,184,122,0.08)",
+    borderWidth: 1.5, borderColor: "rgba(45,184,122,0.25)",
     borderRadius: colors.radius, height: 50,
   },
-  actionBtnAccent: { backgroundColor: C.accent, borderColor: C.accent, flex: 2 },
-  actionBtnPressed: { opacity: 0.8 },
-  actionLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.accent },
-  actionLabelAccent: { color: "#000" },
+  callBtnPressed: { opacity: 0.8 },
+  callBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.accent },
 });
