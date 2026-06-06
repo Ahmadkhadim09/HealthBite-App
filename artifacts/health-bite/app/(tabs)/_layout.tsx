@@ -8,6 +8,8 @@ export default function AppLayout() {
       <Stack.Screen name="signup" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="results" />
+      <Stack.Screen name="restaurant-register" />
+      <Stack.Screen name="restaurant-detail" />
     </Stack>
   );
 }

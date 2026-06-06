@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import * as Location from "expo-location";
@@ -27,6 +28,7 @@ import {
   FOOD_THUMBNAILS,
   RESTAURANT_NAMES,
 } from "@/utils/calories";
+import { type RegisteredRestaurant, REGISTERED_KEY } from "./restaurant-register";
 
 const C = colors.light;
 
@@ -39,7 +41,13 @@ interface OverpassElement {
 }
 export interface MealCard {
   id: string; restaurant: string; mealName: string; thumbnail: string;
-  calories: number; rating: number; isNearby?: boolean;
+  calories: number; rating: number;
+  isNearby?: boolean; isRegistered?: boolean;
+  phone?: string; website?: string;
+  address?: string; city?: string;
+  cuisine?: string; description?: string;
+  priceRange?: string; hours?: string;
+  lat?: number; lon?: number;
 }
 
 async function fetchTheMealDB(category: string): Promise<MealCard[]> {
@@ -53,7 +61,6 @@ async function fetchTheMealDB(category: string): Promise<MealCard[]> {
     thumbnail: m.strMealThumb,
     calories: getCaloriesForMeal(m.idMeal, category),
     rating: getRatingForMeal(m.idMeal),
-    isNearby: false,
   }));
 }
 
@@ -75,8 +82,39 @@ async function fetchNearbyRestaurants(lat: number, lon: number, tdee: number): P
       calories: Math.max(200, mealTarget + ((el.id % 201) - 100)),
       rating: parseFloat((3.5 + (el.id % 15) / 10).toFixed(1)),
       isNearby: true,
+      cuisine: el.tags?.cuisine,
+      lat: el.lat,
+      lon: el.lon,
     };
   });
+}
+
+async function loadRegisteredRestaurants(tdee: number): Promise<MealCard[]> {
+  try {
+    const raw = await AsyncStorage.getItem(REGISTERED_KEY);
+    if (!raw) return [];
+    const list: RegisteredRestaurant[] = JSON.parse(raw);
+    const mealTarget = Math.round(tdee / 3);
+    return list.map((r, i) => ({
+      id: r.id,
+      restaurant: r.name,
+      mealName: `${r.cuisine} Specialty`,
+      thumbnail: FOOD_THUMBNAILS[i % FOOD_THUMBNAILS.length] ?? FOOD_THUMBNAILS[0]!,
+      calories: mealTarget + ((i * 47) % 200) - 100,
+      rating: 4.2 + (i % 5) * 0.1,
+      isRegistered: true,
+      phone: r.phone,
+      website: r.website,
+      address: r.address,
+      city: r.city,
+      cuisine: r.cuisine,
+      description: r.description,
+      priceRange: r.priceRange,
+      hours: r.hours,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -90,19 +128,30 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function RestaurantCard({ item }: { item: MealCard }) {
+function RestaurantCard({ item, onPress }: { item: MealCard; onPress: () => void }) {
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onPress}
+    >
       <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} contentFit="cover" transition={300} />
       <View style={styles.cardContent}>
         <View style={styles.cardTopRow}>
           <Text style={styles.restaurantName} numberOfLines={1}>{item.restaurant}</Text>
-          {item.isNearby && (
-            <View style={styles.nearbyBadge}>
-              <Feather name="map-pin" size={9} color={C.accent} />
-              <Text style={styles.nearbyText}>Nearby</Text>
-            </View>
-          )}
+          <View style={styles.badges}>
+            {item.isRegistered && (
+              <View style={styles.partnerBadge}>
+                <Feather name="shield" size={9} color={C.accent} />
+                <Text style={styles.partnerText}>Partner</Text>
+              </View>
+            )}
+            {item.isNearby && !item.isRegistered && (
+              <View style={styles.nearbyBadge}>
+                <Feather name="map-pin" size={9} color={C.accent} />
+                <Text style={styles.nearbyText}>Nearby</Text>
+              </View>
+            )}
+          </View>
         </View>
         <Text style={styles.mealName} numberOfLines={2}>{item.mealName}</Text>
         <View style={styles.cardFooter}>
@@ -116,7 +165,10 @@ function RestaurantCard({ item }: { item: MealCard }) {
           </View>
         </View>
       </View>
-    </View>
+      <View style={styles.chevron}>
+        <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.2)" />
+      </View>
+    </Pressable>
   );
 }
 
@@ -130,7 +182,10 @@ export default function ResultsScreen() {
 
   const tdee = useMemo(() => {
     if (!userProfile) return 2000;
-    return calculateTDEE(userProfile.age, userProfile.weight, userProfile.height, userProfile.gender, userProfile.activityLevel);
+    return calculateTDEE(
+      userProfile.age, userProfile.weight, userProfile.height,
+      userProfile.gender, userProfile.activityLevel,
+    );
   }, [userProfile]);
 
   const category = useMemo(() => getMealCategory(tdee), [tdee]);
@@ -142,11 +197,13 @@ export default function ResultsScreen() {
   const { data, isLoading, isError, refetch } = useQuery<MealCard[]>({
     queryKey,
     queryFn: async () => {
-      if (coords) {
-        const nearby = await fetchNearbyRestaurants(coords.lat, coords.lon, tdee);
-        if (nearby.length > 0) return nearby;
-      }
-      return fetchTheMealDB(category);
+      const [registered, api] = await Promise.all([
+        loadRegisteredRestaurants(tdee),
+        coords
+          ? fetchNearbyRestaurants(coords.lat, coords.lon, tdee).then((r) => r.length > 0 ? r : fetchTheMealDB(category))
+          : fetchTheMealDB(category),
+      ]);
+      return [...registered, ...api];
     },
     staleTime: 1000 * 60 * 10,
   });
@@ -164,6 +221,33 @@ export default function ResultsScreen() {
       if (geo) setCityName(geo.city ?? geo.region ?? geo.country ?? "your area");
     } catch { setCityName("your area"); }
     setCoords({ lat: latitude, lon: longitude });
+  }
+
+  function openDetail(item: MealCard) {
+    void Haptics.selectionAsync();
+    router.push({
+      pathname: "/(tabs)/restaurant-detail",
+      params: {
+        id: item.id,
+        restaurant: item.restaurant,
+        mealName: item.mealName,
+        thumbnail: item.thumbnail,
+        calories: String(item.calories),
+        rating: String(item.rating),
+        isNearby: item.isNearby ? "true" : "false",
+        isRegistered: item.isRegistered ? "true" : "false",
+        phone: item.phone ?? "",
+        website: item.website ?? "",
+        address: item.address ?? "",
+        city: item.city ?? cityName,
+        cuisine: item.cuisine ?? "",
+        description: item.description ?? "",
+        priceRange: item.priceRange ?? "",
+        hours: item.hours ?? "",
+        lat: item.lat ? String(item.lat) : "",
+        lon: item.lon ? String(item.lon) : "",
+      },
+    });
   }
 
   async function handleLogout() {
@@ -264,6 +348,23 @@ export default function ResultsScreen() {
 
       {locationBanner}
 
+      {/* Register restaurant banner */}
+      <Pressable
+        style={styles.registerBanner}
+        onPress={() => router.push("/(tabs)/restaurant-register")}
+      >
+        <View style={styles.registerLeft}>
+          <View style={styles.registerIcon}>
+            <Feather name="plus-circle" size={18} color={C.accent} />
+          </View>
+          <View>
+            <Text style={styles.registerTitle}>Own a restaurant?</Text>
+            <Text style={styles.registerSub}>List your restaurant — reach health-conscious customers</Text>
+          </View>
+        </View>
+        <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.2)" />
+      </Pressable>
+
       <Text style={styles.sectionHeading}>
         {locationStatus === "granted" && cityName ? `Restaurants near ${cityName}` : "Recommended Restaurants"}
       </Text>
@@ -297,7 +398,9 @@ export default function ResultsScreen() {
         <FlatList
           data={data}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <RestaurantCard item={item} />}
+          renderItem={({ item }) => (
+            <RestaurantCard item={item} onPress={() => openDetail(item)} />
+          )}
           ListHeaderComponent={ListHeader}
           contentContainerStyle={[styles.listContent, { paddingBottom: botPad + 20 }]}
           showsVerticalScrollIndicator={false}
@@ -328,16 +431,13 @@ const styles = StyleSheet.create({
 
   tdeeCard: {
     marginHorizontal: 20, marginBottom: 14,
-    backgroundColor: C.accent,
-    borderRadius: colors.radius + 4, padding: 22,
+    backgroundColor: C.accent, borderRadius: colors.radius + 4, padding: 22,
     shadowColor: C.accent, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
   },
   tdeeTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
   tdeeLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium" },
-  categoryChip: {
-    backgroundColor: "rgba(0,0,0,0.2)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
-  },
+  categoryChip: { backgroundColor: "rgba(0,0,0,0.2)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   categoryChipText: { color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" },
   tdeeNumber: { fontSize: 52, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -1, lineHeight: 60 },
   tdeeUnit: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 14 },
@@ -350,9 +450,8 @@ const styles = StyleSheet.create({
 
   locationBanner: {
     marginHorizontal: 20, marginBottom: 10,
-    backgroundColor: "#161616", borderRadius: colors.radius,
-    padding: 14, flexDirection: "row",
-    alignItems: "center", justifyContent: "space-between",
+    backgroundColor: "#161616", borderRadius: colors.radius, padding: 14,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
   },
   locationBannerDenied: { borderColor: "rgba(239,68,68,0.3)", backgroundColor: "#1a1010" },
@@ -360,14 +459,27 @@ const styles = StyleSheet.create({
   locationLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
   locationTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
   locationSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 1 },
-  locationBtn: {
-    backgroundColor: C.accent, paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20,
-  },
+  locationBtn: { backgroundColor: C.accent, paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20 },
   locationBtnText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#fff" },
+
+  registerBanner: {
+    marginHorizontal: 20, marginBottom: 14,
+    backgroundColor: "rgba(45,184,122,0.07)",
+    borderRadius: colors.radius, padding: 14,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderWidth: 1, borderColor: "rgba(45,184,122,0.2)",
+  },
+  registerLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  registerIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: "rgba(45,184,122,0.12)", alignItems: "center", justifyContent: "center",
+  },
+  registerTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
+  registerSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 2 },
 
   sectionHeading: {
     fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff",
-    marginTop: 8, marginBottom: 12, paddingHorizontal: 20,
+    marginTop: 4, marginBottom: 12, paddingHorizontal: 20,
   },
   listContent: { paddingHorizontal: 20 },
 
@@ -375,11 +487,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#141414", borderRadius: colors.radius, marginBottom: 12,
     flexDirection: "row", overflow: "hidden",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+    alignItems: "center",
   },
+  cardPressed: { opacity: 0.75 },
   thumbnail: { width: 90, height: 96 },
   cardContent: { flex: 1, padding: 12, justifyContent: "space-between" },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 },
   restaurantName: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.accent, flex: 1 },
+  badges: { flexDirection: "row", gap: 5 },
+  partnerBadge: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "rgba(45,184,122,0.15)", borderWidth: 1, borderColor: "rgba(45,184,122,0.3)",
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+  },
+  partnerText: { fontSize: 10, fontFamily: "Inter_700Bold", color: C.accent },
   nearbyBadge: {
     flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: "rgba(45,184,122,0.12)", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
@@ -394,6 +515,7 @@ const styles = StyleSheet.create({
   calorieText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.accent },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   ratingNum: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
+  chevron: { paddingRight: 12 },
 
   loadingText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", marginTop: 12 },
   errorText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff", marginTop: 14, marginBottom: 10 },
