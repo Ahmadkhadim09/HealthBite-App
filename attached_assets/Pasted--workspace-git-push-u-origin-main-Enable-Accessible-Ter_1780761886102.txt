@@ -1,0 +1,189 @@
+
+
+
+~/workspace
+: 
+git push -u origin main
+
+
+
+Enable "Accessible Terminal" in Workspace Settings to use a screen reader with the shell.
+Provide a downloadable archive of the Health Bite React Native application
+
+
+i need a string project to done for my course on health bite make with react native give me its structure and main functionalities in this project we mainly do Login
+↓
+Enter:
+
+Age
+Weight
+Height
+Gender
+Activity Level
+↓
+Calculate Calories
+↓
+API Fetches Restaurants
+↓
+Display:
+Restaurant Name
+Meal Name
+Calories
+Rating "if u do btter then this then recomend"
+
+Show more
+1 day ago
+
+12 messages & 40 actions
+
+Presented output
+Health Bite
+Mobile
+
+Open
+
+1 message & 1 action
+
+Checkpoint made
+1 day ago
+
+Worked for 14 minutes
+Publish
+
+Settings
+Domain
+Available
+health-bite--ahmadkhadim2580
+.replit.app
+Who can access your app
+
+Public
+Anyone on the internet with the URL
+Mobile app name & icon
+
+App icon
+Health Bite
+
+Edit
+
+Review security
+
+Publish
+we need to add here sign up page and api key like if a use in lahore it sugeest restraunt of lahore and other and like for other loactions in this we ask a user to give access of herr location tell me how could we do that
+
+24 hours ago
+
+6 messages & 19 actions
+
+Checkpoint made
+24 hours ago
+
+Worked for 5 minutes
+tell me how you get these restraunts on which basis
+
+24 hours ago
+
+1 message & 1 action
+what about if restraunt whats to add in this app hows the ides
+
+24 hours ago
+
+1 message & 1 action
+Design
+in login phase we add a image to bakck of health bite and do the theme in lck and white like uber and before login and sign up we show the interface of healthy bites with video or graphics which shows your design skills and at the top we show login and sign up and do the things like that
+
+
+1 shape
+24 hours ago
+
+4 messages & 19 actions
+
+Presented output
+Canvas
+Design
+
+Open
+
+1 message & 1 action
+
+Checkpoint made
+24 hours ago
+
+Worked for 3 minutes
+apply that
+
+24 hours ago
+
+6 messages & 19 actions
+
+Checkpoint made
+24 hours ago
+
+Worked for 5 minutes
+could we do this all things in react native ? and how could i get all of this code
+
+23 hours ago
+
+1 message & 1 action
+Option 1 — Download as ZIP (easiest)
+Click the three-dot menu (⋯) at the top of the Replit editor → "Download as zip". You'll get the full monorepo including the artifacts/health-bite/ folder with all your screens.
+
+23 hours ago
+
+1 message & 1 action
+i dont find three dots here
+
+23 hours ago
+
+2 messages & 11 actions
+
+1 output file
+
+Health Bite — React Native App
+File
+
+Open
+
+Checkpoint made
+23 hours ago
+
+Worked for 45 seconds
+i want to upload this on my github
+
+12 minutes ago
+
+1 message & 1 action
+here is a branch is coming instead off repo
+
+9 minutes ago
+
+1 message & 1 action
+remote origin also exit shell siad
+
+3 minutes ago
+
+Determining current remote origin
+That means a remote is already linked. Let me check what it's pointing to and fix it.
+
+
+2 actions
+The origin is set to https://github.com/account — that's a placeholder. You need to update it to your actual GitHub repo URL. Here's how:
+
+Step 1 — Create a new repo on GitHub
+Go to github.com/new → name it health-bite → click Create repository (leave everything else blank)
+
+Step 2 — Copy your repo URL
+It'll look like: https://github.com/YOUR-USERNAME/health-bite.git
+
+Step 3 — Run this in the Shell (replaces the old placeholder):
+
+git remote set-url origin https://github.com/YOUR-USERNAME/health-bite.git
+git push -u origin main
+
+Step 4 — When it asks for password
+Don't use your GitHub password — use a Personal Access Token:
+
+GitHub → click your profile photo → Settings
+Scroll down → Developer settings → Personal access tokens → Tokens (classic)
+Generate new token → tick repo → Generate → copy the token
+Paste it as the password in the Shell
