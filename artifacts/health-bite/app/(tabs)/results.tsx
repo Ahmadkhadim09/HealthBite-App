@@ -21,6 +21,11 @@ import colors from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import {
   calculateTDEE,
+  calculateAdjustedCalories,
+  calculateBMI,
+  getBMICategory,
+  BMI_INFO,
+  GOAL_INFO,
   getCaloriesForMeal,
   getMealCategory,
   getMealNameForCuisine,
@@ -103,18 +108,10 @@ async function loadRegisteredRestaurants(tdee: number): Promise<MealCard[]> {
       calories: mealTarget + ((i * 47) % 200) - 100,
       rating: 4.2 + (i % 5) * 0.1,
       isRegistered: true,
-      phone: r.phone,
-      website: r.website,
-      address: r.address,
-      city: r.city,
-      cuisine: r.cuisine,
-      description: r.description,
-      priceRange: r.priceRange,
-      hours: r.hours,
+      phone: r.phone, website: r.website, address: r.address, city: r.city,
+      cuisine: r.cuisine, description: r.description, priceRange: r.priceRange, hours: r.hours,
     }));
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -124,6 +121,58 @@ function StarRating({ rating }: { rating: number }) {
       {[0, 1, 2, 3, 4].map((i) => (
         <Feather key={i} name="star" size={11} color={i < full ? "#F59E0B" : "rgba(255,255,255,0.15)"} />
       ))}
+    </View>
+  );
+}
+
+function BMICard({ bmi }: { bmi: number }) {
+  const category = getBMICategory(bmi);
+  const info = BMI_INFO[category];
+  const markerPct = Math.min(Math.max(((bmi - 10) / 30) * 100, 2), 97);
+
+  return (
+    <View style={bmiStyles.card}>
+      <View style={bmiStyles.topRow}>
+        <View>
+          <Text style={bmiStyles.cardLabel}>Body Mass Index</Text>
+          <View style={bmiStyles.categoryRow}>
+            <View style={[bmiStyles.dot, { backgroundColor: info.color }]} />
+            <Text style={[bmiStyles.categoryLabel, { color: info.color }]}>{info.label}</Text>
+            <Text style={bmiStyles.rangeText}>{info.range}</Text>
+          </View>
+        </View>
+        <View style={[bmiStyles.bmiCircle, { borderColor: info.color }]}>
+          <Text style={[bmiStyles.bmiNum, { color: info.color }]}>{bmi}</Text>
+          <Text style={bmiStyles.bmiUnit}>BMI</Text>
+        </View>
+      </View>
+
+      {/* Scale bar */}
+      <View style={bmiStyles.scaleWrap}>
+        <View style={bmiStyles.scaleBar}>
+          {/* Segments */}
+          <View style={[bmiStyles.seg, { flex: 18.5 - 10, backgroundColor: "#60A5FA" }]} />
+          <View style={[bmiStyles.seg, { flex: 25 - 18.5, backgroundColor: "#2DB87A" }]} />
+          <View style={[bmiStyles.seg, { flex: 30 - 25, backgroundColor: "#F59E0B" }]} />
+          <View style={[bmiStyles.seg, { flex: 40 - 30, backgroundColor: "#EF4444" }]} />
+        </View>
+        {/* Marker */}
+        <View style={[bmiStyles.marker, { left: `${markerPct}%` as any }]} />
+        {/* Labels */}
+        <View style={bmiStyles.scaleLabels}>
+          <Text style={bmiStyles.scaleLabel}>10</Text>
+          <Text style={bmiStyles.scaleLabelCenter}>18.5</Text>
+          <Text style={bmiStyles.scaleLabelCenter}>25</Text>
+          <Text style={bmiStyles.scaleLabelCenter}>30</Text>
+          <Text style={bmiStyles.scaleLabel}>40</Text>
+        </View>
+      </View>
+
+      {/* Tip */}
+      <View style={bmiStyles.tipRow}>
+        <Feather name="info" size={12} color="rgba(255,255,255,0.25)" />
+        <Text style={bmiStyles.tipText}>{info.tip}</Text>
+      </View>
     </View>
   );
 }
@@ -188,7 +237,14 @@ export default function ResultsScreen() {
     );
   }, [userProfile]);
 
-  const category = useMemo(() => getMealCategory(tdee), [tdee]);
+  const goal = userProfile?.goal ?? "maintain";
+  const adjustedCalories = useMemo(() => calculateAdjustedCalories(tdee, goal), [tdee, goal]);
+  const bmi = useMemo(() => {
+    if (!userProfile) return null;
+    return calculateBMI(userProfile.weight, userProfile.height);
+  }, [userProfile]);
+  const goalInfo = GOAL_INFO[goal];
+  const category = useMemo(() => getMealCategory(adjustedCalories), [adjustedCalories]);
 
   const queryKey = coords
     ? ["restaurants-nearby", coords.lat.toFixed(3), coords.lon.toFixed(3)]
@@ -198,9 +254,10 @@ export default function ResultsScreen() {
     queryKey,
     queryFn: async () => {
       const [registered, api] = await Promise.all([
-        loadRegisteredRestaurants(tdee),
+        loadRegisteredRestaurants(adjustedCalories),
         coords
-          ? fetchNearbyRestaurants(coords.lat, coords.lon, tdee).then((r) => r.length > 0 ? r : fetchTheMealDB(category))
+          ? fetchNearbyRestaurants(coords.lat, coords.lon, adjustedCalories)
+              .then((r) => r.length > 0 ? r : fetchTheMealDB(category))
           : fetchTheMealDB(category),
       ]);
       return [...registered, ...api];
@@ -228,24 +285,15 @@ export default function ResultsScreen() {
     router.push({
       pathname: "/(tabs)/restaurant-detail",
       params: {
-        id: item.id,
-        restaurant: item.restaurant,
-        mealName: item.mealName,
-        thumbnail: item.thumbnail,
-        calories: String(item.calories),
-        rating: String(item.rating),
+        id: item.id, restaurant: item.restaurant, mealName: item.mealName,
+        thumbnail: item.thumbnail, calories: String(item.calories), rating: String(item.rating),
         isNearby: item.isNearby ? "true" : "false",
         isRegistered: item.isRegistered ? "true" : "false",
-        phone: item.phone ?? "",
-        website: item.website ?? "",
-        address: item.address ?? "",
-        city: item.city ?? cityName,
-        cuisine: item.cuisine ?? "",
-        description: item.description ?? "",
-        priceRange: item.priceRange ?? "",
-        hours: item.hours ?? "",
-        lat: item.lat ? String(item.lat) : "",
-        lon: item.lon ? String(item.lon) : "",
+        phone: item.phone ?? "", website: item.website ?? "",
+        address: item.address ?? "", city: item.city ?? cityName,
+        cuisine: item.cuisine ?? "", description: item.description ?? "",
+        priceRange: item.priceRange ?? "", hours: item.hours ?? "",
+        lat: item.lat ? String(item.lat) : "", lon: item.lon ? String(item.lon) : "",
       },
     });
   }
@@ -324,20 +372,38 @@ export default function ResultsScreen() {
         </Pressable>
       </View>
 
-      {/* TDEE card */}
+      {/* TDEE / Goal card */}
       <View style={styles.tdeeCard}>
         <View style={styles.tdeeTopRow}>
-          <Text style={styles.tdeeLabel}>Daily Calorie Goal</Text>
+          <View>
+            <Text style={styles.tdeeLabel}>Daily Calorie Target</Text>
+            <View style={styles.goalBadgeRow}>
+              <Text style={styles.goalBadgeEmoji}>{goalInfo.emoji}</Text>
+              <Text style={styles.goalBadgeText}>{goalInfo.label}</Text>
+            </View>
+          </View>
           <View style={styles.categoryChip}>
             <Text style={styles.categoryChipText}>{category}</Text>
           </View>
         </View>
-        <Text style={styles.tdeeNumber}>{tdee.toLocaleString()}</Text>
+
+        <Text style={styles.tdeeNumber}>{adjustedCalories.toLocaleString()}</Text>
         <Text style={styles.tdeeUnit}>kcal / day</Text>
+
+        {/* Base TDEE vs adjusted */}
+        {goal !== "maintain" && (
+          <View style={styles.tdeeAdjustRow}>
+            <Feather name="trending-down" size={12} color="rgba(255,255,255,0.6)" />
+            <Text style={styles.tdeeAdjustText}>
+              Base TDEE {tdee.toLocaleString()} kcal · {goalInfo.delta}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.tdeeMetaRow}>
           <View style={styles.tdeeMeta}>
             <Feather name="coffee" size={12} color="rgba(255,255,255,0.6)" />
-            <Text style={styles.tdeeMetaText}>{Math.round(tdee / 3)} kcal per meal</Text>
+            <Text style={styles.tdeeMetaText}>{Math.round(adjustedCalories / 3)} kcal per meal</Text>
           </View>
           <View style={styles.tdeeMeta}>
             <Feather name="activity" size={12} color="rgba(255,255,255,0.6)" />
@@ -345,6 +411,9 @@ export default function ResultsScreen() {
           </View>
         </View>
       </View>
+
+      {/* BMI card */}
+      {bmi !== null && <BMICard bmi={bmi} />}
 
       {locationBanner}
 
@@ -359,7 +428,7 @@ export default function ResultsScreen() {
           </View>
           <View>
             <Text style={styles.registerTitle}>Own a restaurant?</Text>
-            <Text style={styles.registerSub}>List your restaurant — reach health-conscious customers</Text>
+            <Text style={styles.registerSub}>List it — reach health-conscious customers near you</Text>
           </View>
         </View>
         <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.2)" />
@@ -378,9 +447,7 @@ export default function ResultsScreen() {
           {ListHeader}
           <View style={styles.center}>
             <ActivityIndicator size="large" color={C.accent} style={{ marginTop: 32 }} />
-            <Text style={styles.loadingText}>
-              {locationStatus === "granted" ? "Finding nearby restaurants…" : "Loading recommendations…"}
-            </Text>
+            <Text style={styles.loadingText}>Loading recommendations…</Text>
           </View>
         </View>
       ) : isError ? (
@@ -412,10 +479,44 @@ export default function ResultsScreen() {
   );
 }
 
+const bmiStyles = StyleSheet.create({
+  card: {
+    marginHorizontal: 20, marginBottom: 14,
+    backgroundColor: "#141414", borderRadius: colors.radius + 4, padding: 18,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+  },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
+  cardLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.4)", marginBottom: 6 },
+  categoryRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  categoryLabel: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  rangeText: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.25)" },
+  bmiCircle: {
+    width: 64, height: 64, borderRadius: 32, borderWidth: 3,
+    alignItems: "center", justifyContent: "center",
+  },
+  bmiNum: { fontSize: 20, fontFamily: "Inter_700Bold", lineHeight: 24 },
+  bmiUnit: { fontSize: 10, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.4)" },
+  scaleWrap: { marginBottom: 12, position: "relative" },
+  scaleBar: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden", marginBottom: 6 },
+  seg: { height: 8 },
+  marker: {
+    position: "absolute", top: -4, width: 16, height: 16,
+    borderRadius: 8, backgroundColor: "#fff",
+    borderWidth: 3, borderColor: "#0A0A0A",
+    marginLeft: -8,
+    shadowColor: "#fff", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 6,
+  },
+  scaleLabels: { flexDirection: "row", justifyContent: "space-between" },
+  scaleLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.25)" },
+  scaleLabelCenter: { fontSize: 10, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.25)" },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
+  tipText: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", flex: 1, lineHeight: 17 },
+});
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: "center", paddingHorizontal: 24 },
-
   topBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingBottom: 16, backgroundColor: C.background,
@@ -428,26 +529,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#1C1C1C", alignItems: "center", justifyContent: "center",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
   },
-
   tdeeCard: {
     marginHorizontal: 20, marginBottom: 14,
     backgroundColor: C.accent, borderRadius: colors.radius + 4, padding: 22,
     shadowColor: C.accent, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
   },
-  tdeeTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
-  tdeeLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium" },
+  tdeeTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 },
+  tdeeLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 4 },
+  goalBadgeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  goalBadgeEmoji: { fontSize: 14 },
+  goalBadgeText: { color: "rgba(255,255,255,0.9)", fontSize: 13, fontFamily: "Inter_600SemiBold" },
   categoryChip: { backgroundColor: "rgba(0,0,0,0.2)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   categoryChipText: { color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" },
   tdeeNumber: { fontSize: 52, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -1, lineHeight: 60 },
-  tdeeUnit: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 14 },
+  tdeeUnit: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 8 },
+  tdeeAdjustRow: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(0,0,0,0.15)", paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 10, marginBottom: 10, alignSelf: "flex-start",
+  },
+  tdeeAdjustText: { color: "rgba(255,255,255,0.75)", fontSize: 11, fontFamily: "Inter_500Medium" },
   tdeeMetaRow: { flexDirection: "row", gap: 10 },
   tdeeMeta: {
     flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "rgba(0,0,0,0.15)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
   tdeeMetaText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontFamily: "Inter_600SemiBold" },
-
   locationBanner: {
     marginHorizontal: 20, marginBottom: 10,
     backgroundColor: "#161616", borderRadius: colors.radius, padding: 14,
@@ -461,11 +569,9 @@ const styles = StyleSheet.create({
   locationSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 1 },
   locationBtn: { backgroundColor: C.accent, paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20 },
   locationBtnText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#fff" },
-
   registerBanner: {
     marginHorizontal: 20, marginBottom: 14,
-    backgroundColor: "rgba(45,184,122,0.07)",
-    borderRadius: colors.radius, padding: 14,
+    backgroundColor: "rgba(45,184,122,0.07)", borderRadius: colors.radius, padding: 14,
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     borderWidth: 1, borderColor: "rgba(45,184,122,0.2)",
   },
@@ -476,18 +582,15 @@ const styles = StyleSheet.create({
   },
   registerTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
   registerSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 2 },
-
   sectionHeading: {
     fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff",
     marginTop: 4, marginBottom: 12, paddingHorizontal: 20,
   },
   listContent: { paddingHorizontal: 20 },
-
   card: {
     backgroundColor: "#141414", borderRadius: colors.radius, marginBottom: 12,
     flexDirection: "row", overflow: "hidden",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
-    alignItems: "center",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)", alignItems: "center",
   },
   cardPressed: { opacity: 0.75 },
   thumbnail: { width: 90, height: 96 },
@@ -516,7 +619,6 @@ const styles = StyleSheet.create({
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   ratingNum: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
   chevron: { paddingRight: 12 },
-
   loadingText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", marginTop: 12 },
   errorText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff", marginTop: 14, marginBottom: 10 },
   retryBtn: { backgroundColor: "#fff", paddingHorizontal: 24, paddingVertical: 12, borderRadius: colors.radius },

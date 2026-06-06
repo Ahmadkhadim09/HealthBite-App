@@ -8,6 +8,7 @@ export type ActivityLevel =
   | "moderate"
   | "active"
   | "veryActive";
+export type Goal = "lose" | "maintain" | "gain";
 
 export interface UserProfile {
   age: number;
@@ -15,6 +16,7 @@ export interface UserProfile {
   height: number;
   gender: Gender;
   activityLevel: ActivityLevel;
+  goal: Goal;
 }
 
 interface AppContextType {

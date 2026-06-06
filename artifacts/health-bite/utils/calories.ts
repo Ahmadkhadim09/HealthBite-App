@@ -1,4 +1,4 @@
-import type { ActivityLevel, Gender } from "@/context/AppContext";
+import type { ActivityLevel, Gender, Goal } from "@/context/AppContext";
 
 export function calculateTDEE(
   age: number,
@@ -22,6 +22,62 @@ export function calculateTDEE(
   };
   return Math.round(bmr * multipliers[activityLevel]);
 }
+
+export function calculateAdjustedCalories(tdee: number, goal: Goal): number {
+  if (goal === "lose") return Math.max(1200, tdee - 500);
+  if (goal === "gain") return tdee + 300;
+  return tdee;
+}
+
+export function calculateBMI(weight: number, height: number): number {
+  const heightM = height / 100;
+  return parseFloat((weight / (heightM * heightM)).toFixed(1));
+}
+
+export type BMICategory = "underweight" | "normal" | "overweight" | "obese";
+
+export function getBMICategory(bmi: number): BMICategory {
+  if (bmi < 18.5) return "underweight";
+  if (bmi < 25) return "normal";
+  if (bmi < 30) return "overweight";
+  return "obese";
+}
+
+export const BMI_INFO: Record<
+  BMICategory,
+  { label: string; color: string; tip: string; range: string }
+> = {
+  underweight: {
+    label: "Underweight",
+    color: "#60A5FA",
+    tip: "Consider increasing calorie intake with nutrient-dense foods.",
+    range: "< 18.5",
+  },
+  normal: {
+    label: "Normal Weight",
+    color: "#2DB87A",
+    tip: "Great! Maintain your balanced diet and active lifestyle.",
+    range: "18.5 – 24.9",
+  },
+  overweight: {
+    label: "Overweight",
+    color: "#F59E0B",
+    tip: "A moderate calorie deficit and regular exercise can help.",
+    range: "25 – 29.9",
+  },
+  obese: {
+    label: "Obese",
+    color: "#EF4444",
+    tip: "Consult a healthcare professional for a personalised plan.",
+    range: "≥ 30",
+  },
+};
+
+export const GOAL_INFO: Record<Goal, { label: string; desc: string; delta: string; emoji: string }> = {
+  lose: { label: "Lose Weight", desc: "Calorie deficit", delta: "−500 kcal/day", emoji: "📉" },
+  maintain: { label: "Maintain Weight", desc: "Stay at TDEE", delta: "±0 kcal/day", emoji: "⚖️" },
+  gain: { label: "Gain Muscle", desc: "Calorie surplus", delta: "+300 kcal/day", emoji: "💪" },
+};
 
 export function getMealCategory(tdee: number): string {
   if (tdee < 1600) return "Vegan";
@@ -60,26 +116,11 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 };
 
 export const RESTAURANT_NAMES = [
-  "The Green Table",
-  "Nourish Kitchen",
-  "VitalBowl",
-  "Fresh & Lean",
-  "The Wholesome Plate",
-  "EatRight Bistro",
-  "Clean Eats Co.",
-  "The Fit Kitchen",
-  "Balance Bar & Grill",
-  "Nutrient House",
-  "The Body Fuel Co.",
-  "Pure Kitchen",
-  "Elevate Eatery",
-  "GreenWell",
-  "The Macro Bar",
-  "Harvest & Health",
-  "Fuel & Go",
-  "The Lean Pantry",
-  "Zest Kitchen",
-  "Vitality Bistro",
+  "The Green Table", "Nourish Kitchen", "VitalBowl", "Fresh & Lean",
+  "The Wholesome Plate", "EatRight Bistro", "Clean Eats Co.", "The Fit Kitchen",
+  "Balance Bar & Grill", "Nutrient House", "The Body Fuel Co.", "Pure Kitchen",
+  "Elevate Eatery", "GreenWell", "The Macro Bar", "Harvest & Health",
+  "Fuel & Go", "The Lean Pantry", "Zest Kitchen", "Vitality Bistro",
 ];
 
 const CUISINE_MEALS: Record<string, string[]> = {
