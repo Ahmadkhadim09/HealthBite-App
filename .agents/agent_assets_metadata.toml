@@ -11,3 +11,9 @@ id = "wlYfIf8wyUTwciKCiuR5s"
 uri = "file://health-bite.tar.gz"
 type = "unspecified"
 title = "Health Bite — React Native App"
+
+[[outputs]]
+id = "ocByjiQ23-9EMd-WfMhY2"
+uri = "file://L1F23BSSE0201_ProjectDocument.pdf"
+type = "pdf"
+title = "L1F23BSSE0201_ProjectDocument.pdf"
