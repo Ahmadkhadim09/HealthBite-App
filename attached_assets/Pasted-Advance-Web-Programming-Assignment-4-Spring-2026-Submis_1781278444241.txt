@@ -1,0 +1,95 @@
+Advance Web Programming  
+Assignment 4  
+(Spring 2026) 
+Submission Deadline: 17th June 2026 – 11:59                                                            
+Submission Mode: Upload your assignment file on the ODOO Portal 
+Marks:10 
+Assignment Description 
+In this assignment, you are required to prepare a Project Documentation for the project you have 
+already finalized for this course. This document should clearly explain your project idea, planning, 
+requirements, technical approach, and user interface. 
+This documentation will serve as the official written record of your semester project and will 
+be used as a reference during project evaluation. 
+Assignment Objective 
+By completing this assignment, you will demonstrate your ability to: 
+• Clearly define a real-world problem 
+• Plan a software project in a structured manner 
+• Identify system requirements 
+• Design application flow and UI structure 
+• Select appropriate technologies for development 
+Assignment Task 
+Prepare a typed project document based on your selected project. 
+Your document must include the following sections: 
+1. Project Title & Student Information 
+Include: 
+• Project Title 
+• Student Name 
+• Registration Number 
+• Section 
+• Course Name 
+2. Project Overview 
+Explain: 
+• What the project is about 
+• The purpose of the application 
+• Type of application (Web / Mobile / Both) 
+3. Problem Statement 
+Describe: 
+• The problem your project aims to solve 
+• Issues or limitations in existing or manual systems 
+4. Project Objectives 
+List the main objectives of your project in bullet points. 
+5. Scope of the Project 
+Clearly mention: 
+• Features included in the project 
+• Features excluded or planned for future implementation 
+6. Functional Requirements 
+Describe what the system will do, such as: 
+• User actions 
+• Core functionalities of the application 
+7. Non-Functional Requirements 
+Explain system qualities including: 
+• Usability 
+• Performance 
+• Responsiveness 
+• Basic security considerations 
+8. Technology Stack 
+Mention: 
+• Frontend technologies used (React.js / React Native, etc.) 
+• Libraries, frameworks, and tools used 
+9. Application Flow / Architecture 
+Explain: 
+• Overall working flow of the application 
+• Interaction between components or screens 
+10. UI Screens / Components Description 
+Provide screenshots or wireframes for each major screen of your project. For each screen, 
+include: 
+• Name and purpose of the screen 
+• Description of key components (buttons, input fields, menus, etc.) 
+• Expected user actions or navigation 
+Note: For mobile projects, include each mobile screen. For web projects, include all main pages. 
+Wireframes/mockups are acceptable if final screens are not ready. 
+11. API Usage (If Applicable) 
+Explain: 
+• Purpose of APIs 
+• Where and how data is used in the application 
+(Code is not required) 
+12. Conclusion 
+Summarize: 
+• The overall project 
+• Expected outcomes and learning 
+Formatting Requirements 
+• Typed document only 
+• Proper headings and section numbering 
+• Include screenshots or wireframes of all major screens 
+• Clear, structured, and original content 
+• Plagiarism will result in zero marks 
+Submission Guidelines 
+• File format: PDF 
+• File name: RegistrationNumber_ProjectDocument.pdf 
+• Upload on ODOO Portal before the deadline 
+Important Instructions 
+• The document must be based only on your approved project 
+• Generic or copied project documents will not be accepted 
+• Screens and UI descriptions are mandatory 
+• This assignment is part of your semester project evaluation 
+GOOD LUCK! 
