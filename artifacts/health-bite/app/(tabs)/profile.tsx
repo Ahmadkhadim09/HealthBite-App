@@ -76,6 +76,9 @@ export default function ProfileScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.headerBar, { paddingTop: topPad + 14 }]}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.6)" />
+        </Pressable>
         <Text style={styles.headerTitle}>Your Profile</Text>
         <Text style={styles.headerSub}>Tell us about yourself</Text>
       </View>
@@ -230,6 +233,11 @@ const styles = StyleSheet.create({
   headerBar: {
     backgroundColor: C.background, paddingHorizontal: 24, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.07)",
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "#1C1C1C", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", marginBottom: 12, alignSelf: "flex-start",
   },
   headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
   headerSub: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 3 },
