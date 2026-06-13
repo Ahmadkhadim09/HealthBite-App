@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "b0038759-587e-4280-baa0-9d2dd1283648"
+      }
+    },
+    "android": {
+      "package": "com.muhammadahmad19steam.workspace"
+    }
+  }
+}
