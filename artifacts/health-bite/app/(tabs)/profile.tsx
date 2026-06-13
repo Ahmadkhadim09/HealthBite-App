@@ -173,7 +173,6 @@ export default function ProfileScreen() {
                       <Feather name="check" size={10} color="#000" />
                     </View>
                   )}
-                  <Text style={styles.goalEmoji}>{info.emoji}</Text>
                   <Text
                     style={[styles.goalLabel, isActive && styles.goalLabelActive]}
                     numberOfLines={1}
