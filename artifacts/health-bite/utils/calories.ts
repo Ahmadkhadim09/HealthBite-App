@@ -73,10 +73,10 @@ export const BMI_INFO: Record<
   },
 };
 
-export const GOAL_INFO: Record<Goal, { label: string; desc: string; delta: string; emoji: string }> = {
-  lose: { label: "Lose Weight", desc: "Calorie deficit", delta: "−500 kcal/day", emoji: "📉" },
-  maintain: { label: "Maintain Weight", desc: "Stay at TDEE", delta: "±0 kcal/day", emoji: "⚖️" },
-  gain: { label: "Gain Muscle", desc: "Calorie surplus", delta: "+300 kcal/day", emoji: "💪" },
+export const GOAL_INFO: Record<Goal, { label: string; shortLabel: string; desc: string; delta: string; emoji: string }> = {
+  lose: { label: "Lose Weight", shortLabel: "Lose", desc: "Calorie deficit", delta: "−500 kcal/day", emoji: "📉" },
+  maintain: { label: "Maintain", shortLabel: "Maintain", desc: "Stay at TDEE", delta: "±0 kcal/day", emoji: "⚖️" },
+  gain: { label: "Gain Muscle", shortLabel: "Gain", desc: "Calorie surplus", delta: "+300 kcal/day", emoji: "💪" },
 };
 
 export function getMealCategory(tdee: number): string {

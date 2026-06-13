@@ -168,17 +168,23 @@ export default function ProfileScreen() {
                   style={[styles.goalCard, isActive && styles.goalCardActive]}
                   onPress={async () => { setGoal(g); await Haptics.selectionAsync(); }}
                 >
+                  {isActive && (
+                    <View style={styles.goalCheck}>
+                      <Feather name="check" size={10} color="#000" />
+                    </View>
+                  )}
                   <Text style={styles.goalEmoji}>{info.emoji}</Text>
-                  <Text style={[styles.goalLabel, isActive && styles.goalLabelActive]}>{info.label}</Text>
-                  <Text style={styles.goalDesc}>{info.desc}</Text>
+                  <Text
+                    style={[styles.goalLabel, isActive && styles.goalLabelActive]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
+                    {info.shortLabel}
+                  </Text>
                   <View style={[styles.goalDelta, isActive && styles.goalDeltaActive]}>
                     <Text style={[styles.goalDeltaText, isActive && styles.goalDeltaTextActive]}>{info.delta}</Text>
                   </View>
-                  {isActive && (
-                    <View style={styles.goalCheck}>
-                      <Feather name="check" size={11} color="#000" />
-                    </View>
-                  )}
                 </Pressable>
               );
             })}
@@ -271,9 +277,8 @@ const styles = StyleSheet.create({
   },
   goalCardActive: { backgroundColor: "#fff", borderColor: "#fff" },
   goalEmoji: { fontSize: 22, marginBottom: 6 },
-  goalLabel: { fontSize: 12, fontFamily: "Inter_700Bold", color: "rgba(255,255,255,0.6)", textAlign: "center" },
+  goalLabel: { fontSize: 13, fontFamily: "Inter_700Bold", color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 8 },
   goalLabelActive: { color: "#000" },
-  goalDesc: { fontSize: 10, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", textAlign: "center", marginTop: 2, marginBottom: 8 },
   goalDelta: {
     backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 8,
     paddingVertical: 3, borderRadius: 10,

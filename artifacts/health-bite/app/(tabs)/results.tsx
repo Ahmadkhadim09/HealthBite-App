@@ -132,33 +132,31 @@ function BMICard({ bmi }: { bmi: number }) {
 
   return (
     <View style={bmiStyles.card}>
+      {/* Header row: label + BMI number pill */}
       <View style={bmiStyles.topRow}>
-        <View>
-          <Text style={bmiStyles.cardLabel}>Body Mass Index</Text>
-          <View style={bmiStyles.categoryRow}>
-            <View style={[bmiStyles.dot, { backgroundColor: info.color }]} />
-            <Text style={[bmiStyles.categoryLabel, { color: info.color }]}>{info.label}</Text>
-            <Text style={bmiStyles.rangeText}>{info.range}</Text>
-          </View>
-        </View>
-        <View style={[bmiStyles.bmiCircle, { borderColor: info.color }]}>
+        <Text style={bmiStyles.cardLabel}>Body Mass Index</Text>
+        <View style={[bmiStyles.bmiPill, { backgroundColor: info.color + "22", borderColor: info.color + "55" }]}>
           <Text style={[bmiStyles.bmiNum, { color: info.color }]}>{bmi}</Text>
-          <Text style={bmiStyles.bmiUnit}>BMI</Text>
+          <Text style={[bmiStyles.bmiUnit, { color: info.color + "99" }]}> BMI</Text>
         </View>
+      </View>
+
+      {/* Category row */}
+      <View style={bmiStyles.categoryRow}>
+        <View style={[bmiStyles.dot, { backgroundColor: info.color }]} />
+        <Text style={[bmiStyles.categoryLabel, { color: info.color }]}>{info.label}</Text>
+        <Text style={bmiStyles.rangeText}>{info.range}</Text>
       </View>
 
       {/* Scale bar */}
       <View style={bmiStyles.scaleWrap}>
         <View style={bmiStyles.scaleBar}>
-          {/* Segments */}
-          <View style={[bmiStyles.seg, { flex: 18.5 - 10, backgroundColor: "#60A5FA" }]} />
-          <View style={[bmiStyles.seg, { flex: 25 - 18.5, backgroundColor: "#2DB87A" }]} />
-          <View style={[bmiStyles.seg, { flex: 30 - 25, backgroundColor: "#F59E0B" }]} />
-          <View style={[bmiStyles.seg, { flex: 40 - 30, backgroundColor: "#EF4444" }]} />
+          <View style={[bmiStyles.seg, { flex: 8.5, backgroundColor: "#60A5FA" }]} />
+          <View style={[bmiStyles.seg, { flex: 6.5, backgroundColor: "#2DB87A" }]} />
+          <View style={[bmiStyles.seg, { flex: 5, backgroundColor: "#F59E0B" }]} />
+          <View style={[bmiStyles.seg, { flex: 10, backgroundColor: "#EF4444" }]} />
         </View>
-        {/* Marker */}
         <View style={[bmiStyles.marker, { left: `${markerPct}%` as any }]} />
-        {/* Labels */}
         <View style={bmiStyles.scaleLabels}>
           <Text style={bmiStyles.scaleLabel}>10</Text>
           <Text style={bmiStyles.scaleLabelCenter}>18.5</Text>
@@ -485,18 +483,22 @@ const bmiStyles = StyleSheet.create({
     backgroundColor: "#141414", borderRadius: colors.radius + 4, padding: 18,
     borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
   },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  cardLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.4)", marginBottom: 6 },
-  categoryRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  topRow: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 8,
+  },
+  cardLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.4)" },
+  bmiPill: {
+    flexDirection: "row", alignItems: "baseline",
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1,
+  },
+  bmiNum: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  bmiUnit: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  categoryRow: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 16 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   categoryLabel: { fontSize: 16, fontFamily: "Inter_700Bold" },
   rangeText: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.25)" },
-  bmiCircle: {
-    width: 64, height: 64, borderRadius: 32, borderWidth: 3,
-    alignItems: "center", justifyContent: "center",
-  },
-  bmiNum: { fontSize: 20, fontFamily: "Inter_700Bold", lineHeight: 24 },
-  bmiUnit: { fontSize: 10, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.4)" },
   scaleWrap: { marginBottom: 12, position: "relative" },
   scaleBar: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden", marginBottom: 6 },
   seg: { height: 8 },
