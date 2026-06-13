@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "health-bite",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
@@ -14,10 +14,20 @@
       "backgroundColor": "#2DB87A"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.healthbite.app"
     },
     "android": {
-      "backgroundColor": "#2DB87A"
+      "backgroundColor": "#2DB87A",
+      "package": "com.healthbite.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#2DB87A"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -30,7 +40,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-location"
     ],
     "experiments": {
       "typedRoutes": true,
